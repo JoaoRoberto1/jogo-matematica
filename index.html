@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake Combinatório</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="hud">
+        <h1>Snake Combinatório</h1>
+        <div class="hud-grid">
+          <div class="hud-item">
+            <span class="label">Pontuação</span>
+            <strong id="score">0</strong>
+          </div>
+          <div class="hud-item">
+            <span class="label">Vidas</span>
+            <strong id="lives">3</strong>
+          </div>
+          <div class="hud-item">
+            <span class="label">Progresso</span>
+            <strong id="progress">0%</strong>
+          </div>
+          <div class="hud-item">
+            <span class="label">Dificuldade</span>
+            <strong id="difficulty">Fácil</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="game-wrapper">
+        <canvas id="gameCanvas" width="480" height="480" aria-label="Jogo da cobrinha"></canvas>
+      </section>
+
+      <footer class="controls">
+        <p>Use as setas do teclado ou WASD para mover a cobrinha.</p>
+        <button id="restartButton" type="button">Reiniciar Jogo</button>
+      </footer>
+    </main>
+
+    <div id="questionModal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h2 id="questionTitle">Pergunta</h2>
+        <p id="questionText"></p>
+        <div id="answers" class="answers"></div>
+        <p id="feedback" class="feedback" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div id="gameOverModal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <h2>Fim de jogo</h2>
+        <p id="gameOverMessage"></p>
+        <button id="playAgainButton" type="button">Jogar novamente</button>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

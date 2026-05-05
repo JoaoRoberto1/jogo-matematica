@@ -341,6 +341,7 @@ window.addEventListener("keydown", (event) => {
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
   const candidate = DIRECTIONS[key];
   if (!candidate || isPausedForQuestion || isGameOver) return;
+  event.preventDefault();
 
   const isOpposite = candidate.x + direction.x === 0 && candidate.y + direction.y === 0;
   if (!isOpposite) {

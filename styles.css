@@ -272,6 +272,47 @@ button:active {
   text-shadow: 0 0 12px rgba(255, 107, 157, 0.4);
 }
 
+.start-modal {
+  text-align: center;
+}
+
+.start-modal h2 {
+  font-size: 1.4rem;
+  background: linear-gradient(90deg, var(--neo-cyan), var(--neo-magenta), var(--neo-green));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 16px rgba(0, 245, 255, 0.4));
+}
+
+.start-modal p {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.start-tips {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem auto 1.2rem;
+  display: grid;
+  gap: 0.4rem;
+  max-width: 320px;
+}
+
+.start-tips li {
+  background: var(--panel-soft);
+  border: 1px solid rgba(57, 255, 20, 0.25);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.start-modal button {
+  font-size: 0.9rem;
+  padding: 0.85rem 2rem;
+}
+
 @media (max-width: 640px) {
   .controls {
     justify-content: center;

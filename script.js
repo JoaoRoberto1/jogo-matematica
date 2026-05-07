@@ -7,6 +7,8 @@ const progressEl = document.getElementById("progress");
 const difficultyEl = document.getElementById("difficulty");
 const restartButton = document.getElementById("restartButton");
 const playAgainButton = document.getElementById("playAgainButton");
+const startButton = document.getElementById("startButton");
+const startModal = document.getElementById("startModal");
 
 const questionModal = document.getElementById("questionModal");
 const questionTitle = document.getElementById("questionTitle");
@@ -286,6 +288,7 @@ function endGame(message) {
 function closeModals() {
   questionModal.classList.add("hidden");
   gameOverModal.classList.add("hidden");
+  if (startModal) startModal.classList.add("hidden");
 }
 
 function draw() {
@@ -355,5 +358,8 @@ window.addEventListener("keydown", (event) => {
 
 restartButton.addEventListener("click", startGame);
 playAgainButton.addEventListener("click", startGame);
+startButton.addEventListener("click", startGame);
 
-startGame();
+initGameState();
+draw();
+startModal.classList.remove("hidden");

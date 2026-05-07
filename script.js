@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const scoreEl = document.getElementById("score");
 const livesEl = document.getElementById("lives");
 const progressEl = document.getElementById("progress");
+const progressFillEl = document.getElementById("progressFill");
 const difficultyEl = document.getElementById("difficulty");
 const restartButton = document.getElementById("restartButton");
 const playAgainButton = document.getElementById("playAgainButton");
@@ -270,10 +271,33 @@ function handleAnswer(selectedIndex, correctIndex) {
 
 function updateHUD() {
   const progress = Math.min(100, Math.round((score / GOAL_SCORE) * 100));
-  scoreEl.textContent = String(score);
-  livesEl.textContent = String(lives);
+
+  if (scoreEl.textContent !== String(score)) {
+    scoreEl.textContent = String(score);
+    scoreEl.classList.remove("pop");
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add("pop");
+  }
+
+  renderHearts(lives);
+
   progressEl.textContent = `${progress}%`;
-  difficultyEl.textContent = labelForDifficulty(getDifficultyByProgress());
+  progressFillEl.style.width = `${progress}%`;
+
+  const diff = getDifficultyByProgress();
+  difficultyEl.textContent = labelForDifficulty(diff);
+  difficultyEl.classList.remove("difficulty-facil", "difficulty-medio", "difficulty-dificil");
+  difficultyEl.classList.add(`difficulty-${diff}`);
+}
+
+function renderHearts(currentLives) {
+  livesEl.innerHTML = "";
+  for (let i = 0; i < INITIAL_LIVES; i += 1) {
+    const heart = document.createElement("span");
+    heart.className = i < currentLives ? "heart heart-full" : "heart heart-empty";
+    heart.textContent = i < currentLives ? "♥" : "♡";
+    livesEl.appendChild(heart);
+  }
 }
 
 function labelForDifficulty(diff) {

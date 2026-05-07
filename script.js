@@ -169,12 +169,17 @@ function isSelfCollision(head) {
   return snake.some((segment) => segment.x === head.x && segment.y === head.y);
 }
 
+const FOOD_EDGE_MARGIN = 2;
+
 function generateFood() {
+  const min = FOOD_EDGE_MARGIN;
+  const max = TILE_COUNT - FOOD_EDGE_MARGIN - 1;
+  const range = max - min + 1;
   let position;
   do {
     position = {
-      x: Math.floor(Math.random() * TILE_COUNT),
-      y: Math.floor(Math.random() * TILE_COUNT)
+      x: min + Math.floor(Math.random() * range),
+      y: min + Math.floor(Math.random() * range)
     };
   } while (snake && snake.some((segment) => segment.x === position.x && segment.y === position.y));
   return position;

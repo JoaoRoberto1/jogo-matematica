@@ -289,7 +289,11 @@ function closeModals() {
 }
 
 function draw() {
-  ctx.fillStyle = "#0f172a";
+  const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  g.addColorStop(0, "#0a0518");
+  g.addColorStop(0.5, "#12061f");
+  g.addColorStop(1, "#05121a");
+  ctx.fillStyle = g;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   drawGrid();
@@ -298,7 +302,7 @@ function draw() {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = "rgba(255,255,255,0.04)";
+  ctx.strokeStyle = "rgba(0, 245, 255, 0.06)";
   for (let i = 0; i <= TILE_COUNT; i += 1) {
     const p = i * GRID_SIZE;
     ctx.beginPath();
@@ -314,7 +318,7 @@ function drawGrid() {
 
 function drawSnake() {
   snake.forEach((segment, index) => {
-    ctx.fillStyle = index === 0 ? "#22d3ee" : "#60a5fa";
+    ctx.fillStyle = index === 0 ? "#00f5ff" : "#39ff14";
     ctx.fillRect(
       segment.x * GRID_SIZE + 1,
       segment.y * GRID_SIZE + 1,
@@ -325,7 +329,7 @@ function drawSnake() {
 }
 
 function drawFood() {
-  ctx.fillStyle = "#f59e0b";
+  ctx.fillStyle = "#ff2bd6";
   ctx.beginPath();
   ctx.arc(
     food.x * GRID_SIZE + GRID_SIZE / 2,

@@ -245,6 +245,9 @@ canvas {
   background: #070510;
   border: 2px solid transparent;
   background-clip: padding-box;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   box-shadow:
     0 0 0 2px rgba(0, 245, 255, 0.5),
     0 0 24px rgba(255, 43, 214, 0.25),

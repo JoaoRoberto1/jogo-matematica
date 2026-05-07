@@ -969,13 +969,73 @@ window.addEventListener("keydown", (event) => {
   const candidate = DIRECTIONS[key];
   if (!candidate) return;
   event.preventDefault();
+  trySetDirection(candidate);
+});
+
+const SWIPE_MIN_PX = 28;
+let swipePointer = null;
+
+function trySetDirection(candidate) {
   if (isPausedForQuestion || isGameOver) return;
+  if (!startModal.classList.contains("hidden")) return;
 
   const isOpposite = candidate.x + direction.x === 0 && candidate.y + direction.y === 0;
   if (!isOpposite) {
     nextDirection = candidate;
   }
+}
+
+canvas.addEventListener("pointerdown", (e) => {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  swipePointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
+  try {
+    canvas.setPointerCapture(e.pointerId);
+  } catch {
+    /* ignore */
+  }
 });
+
+function finishSwipe(clientX, clientY, pointerId) {
+  if (!swipePointer || swipePointer.id !== pointerId) return;
+  const dx = clientX - swipePointer.x;
+  const dy = clientY - swipePointer.y;
+  swipePointer = null;
+
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+  if (adx < SWIPE_MIN_PX && ady < SWIPE_MIN_PX) return;
+
+  let candidate;
+  if (adx >= ady) {
+    candidate = dx > 0 ? DIRECTIONS.ArrowRight : DIRECTIONS.ArrowLeft;
+  } else {
+    candidate = dy > 0 ? DIRECTIONS.ArrowDown : DIRECTIONS.ArrowUp;
+  }
+  trySetDirection(candidate);
+}
+
+canvas.addEventListener("pointerup", (e) => {
+  if (!swipePointer || e.pointerId !== swipePointer.id) return;
+  try {
+    canvas.releasePointerCapture(e.pointerId);
+  } catch {
+    /* ignore */
+  }
+  finishSwipe(e.clientX, e.clientY, e.pointerId);
+});
+
+canvas.addEventListener("pointercancel", (e) => {
+  if (swipePointer && e.pointerId === swipePointer.id) {
+    swipePointer = null;
+    try {
+      canvas.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+  }
+});
+
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 restartButton.addEventListener("click", startGame);
 playAgainButton.addEventListener("click", startGame);

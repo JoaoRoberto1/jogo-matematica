@@ -18,13 +18,84 @@ const answersContainer = document.getElementById("answers");
 const feedbackEl = document.getElementById("feedback");
 
 const gameOverModal = document.getElementById("gameOverModal");
-const gameOverMessage = document.getElementById("gameOverMessage");
+const gameOverReason = document.getElementById("gameOverReason");
+const gameOverScoreEl = document.getElementById("gameOverScore");
+const gameOverBestEl = document.getElementById("gameOverBest");
+const gameOverNewRecordEl = document.getElementById("gameOverNewRecord");
+const menuFromGameOverButton = document.getElementById("menuFromGameOverButton");
 
+const victoryModal = document.getElementById("victoryModal");
+const victoryScoreEl = document.getElementById("victoryScore");
+const victoryBestEl = document.getElementById("victoryBest");
+const victoryNewRecordEl = document.getElementById("victoryNewRecord");
+const victoryPlayAgainButton = document.getElementById("victoryPlayAgainButton");
+const menuFromVictoryButton = document.getElementById("menuFromVictoryButton");
+
+const goalScoreLabel = document.getElementById("goalScoreLabel");
+const startHighScoreEl = document.getElementById("startHighScore");
+
+const HIGH_SCORE_KEY = "snakeCombinatorioBestScore";
 const GRID_SIZE = 20;
 const TILE_COUNT = canvas.width / GRID_SIZE;
 const INITIAL_SPEED = 130;
 const INITIAL_LIVES = 3;
 const GOAL_SCORE = 12;
+
+function getStoredBest() {
+  try {
+    return Math.max(0, parseInt(localStorage.getItem(HIGH_SCORE_KEY) || "0", 10) || 0);
+  } catch {
+    return 0;
+  }
+}
+
+function saveHighScoreIfBeat(finalScore) {
+  const prev = getStoredBest();
+  const isNewRecord = finalScore > prev;
+  const best = Math.max(prev, finalScore);
+  if (isNewRecord) {
+    try {
+      localStorage.setItem(HIGH_SCORE_KEY, String(best));
+    } catch {
+      /* ignore */
+    }
+  }
+  return { best, isNewRecord };
+}
+
+function updateStartHighScoreDisplay() {
+  const b = getStoredBest();
+  startHighScoreEl.textContent = b > 0 ? String(b) : "—";
+}
+
+function showLossScreen(reason, finalScore, best, isNewRecord) {
+  gameOverReason.textContent = reason;
+  gameOverScoreEl.textContent = String(finalScore);
+  gameOverBestEl.textContent = String(best);
+  gameOverNewRecordEl.classList.toggle("hidden", !isNewRecord);
+  const openLoss = () => openModal(gameOverModal);
+  if (!questionModal.classList.contains("hidden")) {
+    closeModal(questionModal, openLoss);
+  } else {
+    openLoss();
+  }
+}
+
+function showVictoryScreen(finalScore, best, isNewRecord) {
+  victoryScoreEl.textContent = String(finalScore);
+  victoryBestEl.textContent = String(best);
+  victoryNewRecordEl.classList.toggle("hidden", !isNewRecord);
+  openModal(victoryModal);
+}
+
+function goToMainMenu() {
+  clearInterval(gameLoopId);
+  stopTimer();
+  closeModals();
+  initGameState();
+  updateStartHighScoreDisplay();
+  openModal(startModal);
+}
 
 const DIRECTIONS = {
   ArrowUp: { x: 0, y: -1 },
@@ -298,6 +369,8 @@ function handleAnswer(selectedIndex, correctIndex, explanation, timedOut = false
 
   feedbackEl.classList.add("show");
 
+  let reachedGoal = false;
+
   if (!timedOut && selectedIndex === correctIndex) {
     buttons[selectedIndex].classList.add("correct");
     feedbackIconEl.textContent = "✓";
@@ -306,6 +379,7 @@ function handleAnswer(selectedIndex, correctIndex, explanation, timedOut = false
     pendingGrowth = true;
     score += 1;
     speed = Math.max(70, INITIAL_SPEED - score * 4);
+    if (score >= GOAL_SCORE) reachedGoal = true;
   } else {
     if (!timedOut && selectedIndex >= 0) {
       buttons[selectedIndex].classList.add("wrong");
@@ -327,6 +401,14 @@ function handleAnswer(selectedIndex, correctIndex, explanation, timedOut = false
   updateHUD();
   setTimeout(() => {
     closeModal(questionModal, () => {
+      if (reachedGoal) {
+        clearInterval(gameLoopId);
+        isGameOver = true;
+        isPausedForQuestion = true;
+        const { best, isNewRecord } = saveHighScoreIfBeat(score);
+        showVictoryScreen(score, best, isNewRecord);
+        return;
+      }
       if (!pendingGrowth) {
         snake.pop();
       }
@@ -390,22 +472,18 @@ function labelForDifficulty(diff) {
   return "Fácil";
 }
 
-function endGame(message) {
+function endGame(reasonMessage) {
   isGameOver = true;
   isPausedForQuestion = true;
   clearInterval(gameLoopId);
   stopTimer();
-  gameOverMessage.textContent = `${message} Pontuação final: ${score}.`;
-  if (!questionModal.classList.contains("hidden")) {
-    closeModal(questionModal, () => openModal(gameOverModal));
-  } else {
-    openModal(gameOverModal);
-  }
+  const { best, isNewRecord } = saveHighScoreIfBeat(score);
+  showLossScreen(reasonMessage, score, best, isNewRecord);
 }
 
 function closeModals() {
   stopTimer();
-  [questionModal, gameOverModal, startModal].forEach((m) => {
+  [questionModal, gameOverModal, victoryModal, startModal].forEach((m) => {
     if (m) {
       m.classList.add("hidden");
       m.classList.remove("show", "closing");
@@ -696,6 +774,12 @@ window.addEventListener("keydown", (event) => {
 restartButton.addEventListener("click", startGame);
 playAgainButton.addEventListener("click", startGame);
 startButton.addEventListener("click", startGame);
+victoryPlayAgainButton.addEventListener("click", startGame);
+menuFromGameOverButton.addEventListener("click", goToMainMenu);
+menuFromVictoryButton.addEventListener("click", goToMainMenu);
+
+goalScoreLabel.textContent = String(GOAL_SCORE);
+updateStartHighScoreDisplay();
 
 initGameState();
 openModal(startModal);

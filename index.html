@@ -50,9 +50,11 @@
     </main>
 
     <div id="startModal" class="modal" role="dialog" aria-modal="true">
-      <div class="modal-content start-modal">
+      <div class="modal-content start-modal splash-screen">
+        <p class="splash-kicker">Análise combinatória</p>
         <h2>Snake Combinatório</h2>
-        <p>
+        <p class="splash-goal">Meta: <strong id="goalScoreLabel">12</strong> pontos para vencer</p>
+        <p class="splash-intro">
           Controle a cobrinha com as <strong>setas</strong> ou <strong>WASD</strong>. A cada
           alimento, responda uma pergunta de arranjos para crescer. Errar custa uma vida.
         </p>
@@ -61,7 +63,11 @@
           <li>Dificuldade aumenta com o progresso</li>
           <li>Evite paredes e o próprio corpo</li>
         </ul>
-        <button id="startButton" type="button">Jogar</button>
+        <div class="splash-highscore" id="startHighScoreRow">
+          <span class="splash-highscore-label">Melhor pontuação</span>
+          <span id="startHighScore" class="splash-highscore-value">—</span>
+        </div>
+        <button id="startButton" type="button" class="btn-primary">Jogar</button>
       </div>
     </div>
 
@@ -83,11 +89,43 @@
       </div>
     </div>
 
-    <div id="gameOverModal" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="modal-content">
-        <h2>Fim de jogo</h2>
-        <p id="gameOverMessage"></p>
-        <button id="playAgainButton" type="button">Jogar novamente</button>
+    <div id="gameOverModal" class="modal hidden end-screen end-screen-loss" role="dialog" aria-modal="true">
+      <div class="modal-content end-modal">
+        <h2 class="end-title">Fim de jogo</h2>
+        <p id="gameOverReason" class="end-reason"></p>
+        <div class="score-hero">
+          <span class="score-hero-label">Pontuação</span>
+          <span id="gameOverScore" class="score-hero-value">0</span>
+        </div>
+        <div class="best-row">
+          <span class="best-label">Melhor pontuação</span>
+          <span id="gameOverBest" class="best-value">0</span>
+          <span id="gameOverNewRecord" class="new-record-badge hidden">Novo recorde!</span>
+        </div>
+        <div class="end-actions">
+          <button id="playAgainButton" type="button" class="btn-primary">Jogar novamente</button>
+          <button id="menuFromGameOverButton" type="button" class="btn-secondary">Menu inicial</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="victoryModal" class="modal hidden end-screen end-screen-win" role="dialog" aria-modal="true">
+      <div class="modal-content end-modal">
+        <h2 class="end-title end-title-win">Vitória!</h2>
+        <p class="end-reason">Você atingiu a meta e dominou os arranjos nesta partida.</p>
+        <div class="score-hero score-hero-win">
+          <span class="score-hero-label">Pontuação final</span>
+          <span id="victoryScore" class="score-hero-value">12</span>
+        </div>
+        <div class="best-row">
+          <span class="best-label">Melhor pontuação</span>
+          <span id="victoryBest" class="best-value">0</span>
+          <span id="victoryNewRecord" class="new-record-badge hidden">Novo recorde!</span>
+        </div>
+        <div class="end-actions">
+          <button id="victoryPlayAgainButton" type="button" class="btn-primary">Jogar de novo</button>
+          <button id="menuFromVictoryButton" type="button" class="btn-secondary">Menu inicial</button>
+        </div>
       </div>
     </div>
 

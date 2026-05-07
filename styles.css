@@ -278,6 +278,56 @@ canvas.shake {
   flex-wrap: wrap;
 }
 
+.controls-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btn-icon {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  background: transparent;
+  color: var(--neo-cyan);
+  border: 2px solid rgba(0, 245, 255, 0.55);
+  box-shadow: 0 0 18px rgba(0, 245, 255, 0.15);
+}
+
+.btn-icon:hover {
+  background: rgba(0, 245, 255, 0.1);
+  box-shadow: 0 0 22px rgba(0, 245, 255, 0.3);
+}
+
+.btn-icon .mute-icon-on {
+  display: inline;
+}
+.btn-icon .mute-icon-off {
+  display: none;
+}
+
+.btn-icon.muted {
+  color: var(--bad);
+  border-color: rgba(255, 107, 157, 0.6);
+  box-shadow: 0 0 18px rgba(255, 107, 157, 0.2);
+}
+
+.btn-icon.muted:hover {
+  background: rgba(255, 107, 157, 0.08);
+  box-shadow: 0 0 22px rgba(255, 107, 157, 0.3);
+}
+
+.btn-icon.muted .mute-icon-on {
+  display: none;
+}
+.btn-icon.muted .mute-icon-off {
+  display: inline;
+}
+
 .controls p {
   margin: 0;
   color: var(--muted);

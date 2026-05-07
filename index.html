@@ -45,7 +45,20 @@
 
       <footer class="controls">
         <p>Use as setas do teclado ou WASD para mover a cobrinha.</p>
-        <button id="restartButton" type="button">Reiniciar Jogo</button>
+        <div class="controls-actions">
+          <button
+            id="muteButton"
+            type="button"
+            class="btn-icon"
+            aria-label="Ativar/desativar som"
+            aria-pressed="false"
+            title="Som"
+          >
+            <span class="mute-icon-on" aria-hidden="true">♪</span>
+            <span class="mute-icon-off" aria-hidden="true">⌀</span>
+          </button>
+          <button id="restartButton" type="button">Reiniciar Jogo</button>
+        </div>
       </footer>
     </main>
 

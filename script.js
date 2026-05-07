@@ -34,12 +34,207 @@ const menuFromVictoryButton = document.getElementById("menuFromVictoryButton");
 const goalScoreLabel = document.getElementById("goalScoreLabel");
 const startHighScoreEl = document.getElementById("startHighScore");
 
+const muteButton = document.getElementById("muteButton");
+
 const HIGH_SCORE_KEY = "snakeCombinatorioBestScore";
+const MUTE_KEY = "snakeCombinatorioMuted";
 const GRID_SIZE = 20;
 const TILE_COUNT = canvas.width / GRID_SIZE;
 const INITIAL_SPEED = 130;
 const INITIAL_LIVES = 3;
 const GOAL_SCORE = 12;
+
+/* ---------------- ÁUDIO ---------------- */
+const audio = {
+  ctx: null,
+  master: null,
+  musicGain: null,
+  musicNodes: [],
+  musicTimer: null,
+  muted: false
+};
+
+function getStoredMuted() {
+  try {
+    return localStorage.getItem(MUTE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveMuted(muted) {
+  try {
+    localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+}
+
+function ensureAudio() {
+  if (audio.ctx) return audio.ctx;
+  const Ctor = window.AudioContext || window.webkitAudioContext;
+  if (!Ctor) return null;
+  audio.ctx = new Ctor();
+  audio.master = audio.ctx.createGain();
+  audio.master.gain.value = audio.muted ? 0 : 0.5;
+  audio.master.connect(audio.ctx.destination);
+  return audio.ctx;
+}
+
+function resumeAudioIfNeeded() {
+  if (audio.ctx && audio.ctx.state === "suspended") {
+    audio.ctx.resume().catch(() => {});
+  }
+}
+
+function playTone({ freq, duration = 0.18, type = "sine", gain = 0.18, attack = 0.01, release = 0.08, slideTo = null }) {
+  if (audio.muted) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  resumeAudioIfNeeded();
+
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  if (slideTo !== null) {
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), ctx.currentTime + duration);
+  }
+  g.gain.setValueAtTime(0.0001, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(gain, ctx.currentTime + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration + release);
+
+  osc.connect(g);
+  g.connect(audio.master);
+  osc.start();
+  osc.stop(ctx.currentTime + duration + release + 0.05);
+}
+
+function playSequence(notes, gap = 0.07) {
+  let delay = 0;
+  notes.forEach((n) => {
+    setTimeout(() => playTone(n), delay * 1000);
+    delay += (n.duration || 0.15) + gap;
+  });
+}
+
+const sounds = {
+  eat() {
+    playTone({ freq: 660, duration: 0.08, type: "triangle", gain: 0.22, slideTo: 990 });
+  },
+  correct() {
+    playSequence(
+      [
+        { freq: 523.25, duration: 0.1, type: "triangle", gain: 0.2 },
+        { freq: 659.25, duration: 0.1, type: "triangle", gain: 0.2 },
+        { freq: 783.99, duration: 0.18, type: "triangle", gain: 0.22 }
+      ],
+      0.02
+    );
+  },
+  wrong() {
+    playTone({ freq: 240, duration: 0.18, type: "sawtooth", gain: 0.2, slideTo: 110 });
+    setTimeout(() => playTone({ freq: 180, duration: 0.22, type: "square", gain: 0.16, slideTo: 90 }), 120);
+  },
+  death() {
+    playSequence(
+      [
+        { freq: 392, duration: 0.18, type: "square", gain: 0.22 },
+        { freq: 311.13, duration: 0.18, type: "square", gain: 0.22 },
+        { freq: 246.94, duration: 0.18, type: "square", gain: 0.22 },
+        { freq: 196, duration: 0.4, type: "square", gain: 0.22, slideTo: 80 }
+      ],
+      0.04
+    );
+  },
+  victory() {
+    playSequence(
+      [
+        { freq: 523.25, duration: 0.12, type: "triangle", gain: 0.22 },
+        { freq: 659.25, duration: 0.12, type: "triangle", gain: 0.22 },
+        { freq: 783.99, duration: 0.12, type: "triangle", gain: 0.22 },
+        { freq: 1046.5, duration: 0.32, type: "triangle", gain: 0.24 }
+      ],
+      0.03
+    );
+  }
+};
+
+const MUSIC_NOTES = [220.0, 261.63, 329.63, 392.0, 329.63, 261.63];
+function startMusic() {
+  if (audio.muted) return;
+  if (audio.musicTimer) return;
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  resumeAudioIfNeeded();
+
+  audio.musicGain = ctx.createGain();
+  audio.musicGain.gain.value = 0.045;
+  audio.musicGain.connect(audio.master);
+
+  let i = 0;
+  const playNote = () => {
+    if (audio.muted || !audio.musicGain) return;
+    const freq = MUSIC_NOTES[i % MUSIC_NOTES.length];
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.9, ctx.currentTime + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.55);
+    osc.connect(g);
+    g.connect(audio.musicGain);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.6);
+    i += 1;
+  };
+
+  playNote();
+  audio.musicTimer = setInterval(playNote, 480);
+}
+
+function stopMusic() {
+  if (audio.musicTimer) {
+    clearInterval(audio.musicTimer);
+    audio.musicTimer = null;
+  }
+  if (audio.musicGain) {
+    try {
+      audio.musicGain.disconnect();
+    } catch {
+      /* ignore */
+    }
+    audio.musicGain = null;
+  }
+}
+
+function applyMutedState() {
+  muteButton.classList.toggle("muted", audio.muted);
+  muteButton.setAttribute("aria-pressed", String(audio.muted));
+  muteButton.title = audio.muted ? "Som desligado" : "Som ligado";
+  if (audio.master) audio.master.gain.value = audio.muted ? 0 : 0.5;
+  if (audio.muted) {
+    stopMusic();
+  }
+}
+
+function toggleMute() {
+  audio.muted = !audio.muted;
+  saveMuted(audio.muted);
+  applyMutedState();
+  if (!audio.muted) {
+    ensureAudio();
+    resumeAudioIfNeeded();
+    const gameRunning = !isGameOver && startModal.classList.contains("hidden");
+    if (gameRunning) startMusic();
+  }
+}
+
+audio.muted = getStoredMuted();
+applyMutedState();
+muteButton.addEventListener("click", toggleMute);
+/* --------------------------------------- */
 
 function getStoredBest() {
   try {
@@ -91,6 +286,7 @@ function showVictoryScreen(finalScore, best, isNewRecord) {
 function goToMainMenu() {
   clearInterval(gameLoopId);
   stopTimer();
+  stopMusic();
   closeModals();
   initGameState();
   updateStartHighScoreDisplay();
@@ -207,6 +403,9 @@ function initGameState() {
 function startGame() {
   clearInterval(gameLoopId);
   initGameState();
+  ensureAudio();
+  resumeAudioIfNeeded();
+  startMusic();
   gameLoopId = setInterval(tick, speed);
 }
 
@@ -234,6 +433,7 @@ function tick() {
 
   if (head.x === food.x && head.y === food.y) {
     spawnParticles(food.x, food.y);
+    sounds.eat();
     isPausedForQuestion = true;
     showQuestion();
   } else {
@@ -380,6 +580,7 @@ function handleAnswer(selectedIndex, correctIndex, explanation, timedOut = false
     score += 1;
     speed = Math.max(70, INITIAL_SPEED - score * 4);
     if (score >= GOAL_SCORE) reachedGoal = true;
+    sounds.correct();
   } else {
     if (!timedOut && selectedIndex >= 0) {
       buttons[selectedIndex].classList.add("wrong");
@@ -391,6 +592,7 @@ function handleAnswer(selectedIndex, correctIndex, explanation, timedOut = false
     feedbackEl.classList.add("bad");
     lives -= 1;
     shakeScreen();
+    sounds.wrong();
     if (lives <= 0) {
       updateHUD();
       setTimeout(() => endGame("Você ficou sem vidas!"), 1600);
@@ -405,6 +607,8 @@ function handleAnswer(selectedIndex, correctIndex, explanation, timedOut = false
         clearInterval(gameLoopId);
         isGameOver = true;
         isPausedForQuestion = true;
+        stopMusic();
+        sounds.victory();
         const { best, isNewRecord } = saveHighScoreIfBeat(score);
         showVictoryScreen(score, best, isNewRecord);
         return;
@@ -477,6 +681,8 @@ function endGame(reasonMessage) {
   isPausedForQuestion = true;
   clearInterval(gameLoopId);
   stopTimer();
+  stopMusic();
+  sounds.death();
   const { best, isNewRecord } = saveHighScoreIfBeat(score);
   showLossScreen(reasonMessage, score, best, isNewRecord);
 }

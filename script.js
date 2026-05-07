@@ -128,7 +128,6 @@ function startGame() {
   clearInterval(gameLoopId);
   initGameState();
   gameLoopId = setInterval(tick, speed);
-  draw();
 }
 
 function restartLoopWithSpeed() {
@@ -146,6 +145,7 @@ function tick() {
   };
 
   if (isWallCollision(head) || isSelfCollision(head)) {
+    shakeScreen();
     endGame("A cobrinha colidiu!");
     return;
   }
@@ -153,13 +153,12 @@ function tick() {
   snake.unshift(head);
 
   if (head.x === food.x && head.y === food.y) {
+    spawnParticles(food.x, food.y);
     isPausedForQuestion = true;
     showQuestion();
   } else {
     snake.pop();
   }
-
-  draw();
 }
 
 function isWallCollision(head) {
@@ -248,6 +247,7 @@ function handleAnswer(selectedIndex, correctIndex) {
     feedbackEl.textContent = "Resposta incorreta! Você perdeu 1 vida.";
     feedbackEl.classList.add("bad");
     lives -= 1;
+    shakeScreen();
     if (lives <= 0) {
       updateHUD();
       setTimeout(() => endGame("Você ficou sem vidas!"), 900);
@@ -265,7 +265,6 @@ function handleAnswer(selectedIndex, correctIndex) {
     food = generateFood();
     isPausedForQuestion = false;
     restartLoopWithSpeed();
-    draw();
   }, 900);
 }
 
@@ -320,21 +319,61 @@ function closeModals() {
   if (startModal) startModal.classList.add("hidden");
 }
 
-function draw() {
-  const g = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-  g.addColorStop(0, "#0a0518");
-  g.addColorStop(0.5, "#12061f");
-  g.addColorStop(1, "#05121a");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+const particles = [];
 
+function draw() {
+  ctx.save();
+  ctx.beginPath();
+  const radius = 10;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.moveTo(radius, 0);
+  ctx.lineTo(w - radius, 0);
+  ctx.quadraticCurveTo(w, 0, w, radius);
+  ctx.lineTo(w, h - radius);
+  ctx.quadraticCurveTo(w, h, w - radius, h);
+  ctx.lineTo(radius, h);
+  ctx.quadraticCurveTo(0, h, 0, h - radius);
+  ctx.lineTo(0, radius);
+  ctx.quadraticCurveTo(0, 0, radius, 0);
+  ctx.closePath();
+  ctx.clip();
+
+  const bg = ctx.createRadialGradient(w / 2, h / 2, 30, w / 2, h / 2, w * 0.8);
+  bg.addColorStop(0, "#1a0830");
+  bg.addColorStop(0.55, "#0c0420");
+  bg.addColorStop(1, "#04020c");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  drawVignetteGlow();
   drawGrid();
   drawFood();
   drawSnake();
+  drawParticles();
+
+  ctx.restore();
+}
+
+function drawVignetteGlow() {
+  const w = canvas.width;
+  const h = canvas.height;
+  const grd1 = ctx.createRadialGradient(w * 0.15, h * 0.15, 10, w * 0.15, h * 0.15, w * 0.5);
+  grd1.addColorStop(0, "rgba(0, 245, 255, 0.10)");
+  grd1.addColorStop(1, "rgba(0, 245, 255, 0)");
+  ctx.fillStyle = grd1;
+  ctx.fillRect(0, 0, w, h);
+
+  const grd2 = ctx.createRadialGradient(w * 0.85, h * 0.85, 10, w * 0.85, h * 0.85, w * 0.5);
+  grd2.addColorStop(0, "rgba(255, 43, 214, 0.10)");
+  grd2.addColorStop(1, "rgba(255, 43, 214, 0)");
+  ctx.fillStyle = grd2;
+  ctx.fillRect(0, 0, w, h);
 }
 
 function drawGrid() {
   ctx.strokeStyle = "rgba(0, 245, 255, 0.06)";
+  ctx.lineWidth = 1;
   for (let i = 0; i <= TILE_COUNT; i += 1) {
     const p = i * GRID_SIZE;
     ctx.beginPath();
@@ -348,36 +387,211 @@ function drawGrid() {
   }
 }
 
+function roundedRect(x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.lineTo(x + w - rr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+  ctx.lineTo(x + w, y + h - rr);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+  ctx.lineTo(x + rr, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+  ctx.lineTo(x, y + rr);
+  ctx.quadraticCurveTo(x, y, x + rr, y);
+  ctx.closePath();
+}
+
+function lerpColor(c1, c2, t) {
+  const a = parseInt(c1.slice(1), 16);
+  const b = parseInt(c2.slice(1), 16);
+  const r1 = (a >> 16) & 255;
+  const g1 = (a >> 8) & 255;
+  const b1 = a & 255;
+  const r2 = (b >> 16) & 255;
+  const g2 = (b >> 8) & 255;
+  const b2 = b & 255;
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const bl = Math.round(b1 + (b2 - b1) * t);
+  return `rgb(${r}, ${g}, ${bl})`;
+}
+
 function drawSnake() {
-  snake.forEach((segment, index) => {
-    ctx.fillStyle = index === 0 ? "#00f5ff" : "#39ff14";
-    ctx.fillRect(
-      segment.x * GRID_SIZE + 1,
-      segment.y * GRID_SIZE + 1,
-      GRID_SIZE - 2,
-      GRID_SIZE - 2
-    );
-  });
+  const headColor = "#00f5ff";
+  const tailColor = "#39ff14";
+  const len = snake.length;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0, 245, 255, 0.6)";
+  ctx.shadowBlur = 18;
+
+  for (let i = len - 1; i >= 0; i -= 1) {
+    const segment = snake[i];
+    const t = len === 1 ? 0 : i / (len - 1);
+    const color = lerpColor(headColor, tailColor, t);
+    ctx.fillStyle = color;
+
+    const px = segment.x * GRID_SIZE + 2;
+    const py = segment.y * GRID_SIZE + 2;
+    const size = GRID_SIZE - 4;
+    const radius = i === 0 ? 8 : 6;
+
+    if (i > 0 && i < len - 1) {
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = "rgba(57, 255, 20, 0.4)";
+    } else if (i === 0) {
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = "rgba(0, 245, 255, 0.85)";
+    }
+
+    roundedRect(px, py, size, size, radius);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  drawSnakeEyes();
+}
+
+function drawSnakeEyes() {
+  const head = snake[0];
+  const cx = head.x * GRID_SIZE + GRID_SIZE / 2;
+  const cy = head.y * GRID_SIZE + GRID_SIZE / 2;
+  const offset = 4;
+  const eyeR = 2.2;
+  const pupilR = 1.2;
+
+  let e1x;
+  let e1y;
+  let e2x;
+  let e2y;
+
+  if (direction.x === 1) {
+    e1x = cx + 2; e1y = cy - offset;
+    e2x = cx + 2; e2y = cy + offset;
+  } else if (direction.x === -1) {
+    e1x = cx - 2; e1y = cy - offset;
+    e2x = cx - 2; e2y = cy + offset;
+  } else if (direction.y === -1) {
+    e1x = cx - offset; e1y = cy - 2;
+    e2x = cx + offset; e2y = cy - 2;
+  } else {
+    e1x = cx - offset; e1y = cy + 2;
+    e2x = cx + offset; e2y = cy + 2;
+  }
+
+  ctx.fillStyle = "#0a0218";
+  ctx.beginPath();
+  ctx.arc(e1x, e1y, eyeR, 0, Math.PI * 2);
+  ctx.arc(e2x, e2y, eyeR, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(e1x + direction.x * 0.6, e1y + direction.y * 0.6, pupilR, 0, Math.PI * 2);
+  ctx.arc(e2x + direction.x * 0.6, e2y + direction.y * 0.6, pupilR, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawFood() {
-  ctx.fillStyle = "#ff2bd6";
+  const cx = food.x * GRID_SIZE + GRID_SIZE / 2;
+  const cy = food.y * GRID_SIZE + GRID_SIZE / 2;
+  const t = performance.now() / 1000;
+  const pulse = 1 + Math.sin(t * 3.5) * 0.08;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(pulse, pulse);
+
+  const auraGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, GRID_SIZE);
+  auraGrad.addColorStop(0, "rgba(255, 43, 214, 0.5)");
+  auraGrad.addColorStop(0.5, "rgba(255, 43, 214, 0.18)");
+  auraGrad.addColorStop(1, "rgba(255, 43, 214, 0)");
+  ctx.fillStyle = auraGrad;
   ctx.beginPath();
-  ctx.arc(
-    food.x * GRID_SIZE + GRID_SIZE / 2,
-    food.y * GRID_SIZE + GRID_SIZE / 2,
-    GRID_SIZE / 2.6,
-    0,
-    Math.PI * 2
-  );
+  ctx.arc(0, 0, GRID_SIZE, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 43, 214, 0.18)";
+  ctx.beginPath();
+  ctx.arc(0, 0, GRID_SIZE / 2.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#f4edff";
+  ctx.shadowColor = "rgba(255, 43, 214, 0.9)";
+  ctx.shadowBlur = 12;
+  ctx.font = `bold ${Math.floor(GRID_SIZE * 0.95)}px "Orbitron", system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("π", 0, 1);
+
+  ctx.restore();
+}
+
+function spawnParticles(gridX, gridY, count = 22) {
+  const cx = gridX * GRID_SIZE + GRID_SIZE / 2;
+  const cy = gridY * GRID_SIZE + GRID_SIZE / 2;
+  const colors = ["#ff2bd6", "#00f5ff", "#39ff14", "#f0ff4a"];
+  for (let i = 0; i < count; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 3;
+    particles.push({
+      x: cx,
+      y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.02 + Math.random() * 0.02,
+      size: 2 + Math.random() * 2.5,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    });
+  }
+}
+
+function drawParticles() {
+  for (let i = particles.length - 1; i >= 0; i -= 1) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.94;
+    p.vy *= 0.94;
+    p.life -= p.decay;
+
+    if (p.life <= 0) {
+      particles.splice(i, 1);
+      continue;
+    }
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function shakeScreen() {
+  canvas.classList.remove("shake");
+  void canvas.offsetWidth;
+  canvas.classList.add("shake");
+}
+
+let renderLoopId = null;
+function renderLoop() {
+  draw();
+  renderLoopId = requestAnimationFrame(renderLoop);
 }
 
 window.addEventListener("keydown", (event) => {
   const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
   const candidate = DIRECTIONS[key];
-  if (!candidate || isPausedForQuestion || isGameOver) return;
+  if (!candidate) return;
   event.preventDefault();
+  if (isPausedForQuestion || isGameOver) return;
 
   const isOpposite = candidate.x + direction.x === 0 && candidate.y + direction.y === 0;
   if (!isOpposite) {
@@ -390,5 +604,5 @@ playAgainButton.addEventListener("click", startGame);
 startButton.addEventListener("click", startGame);
 
 initGameState();
-draw();
 startModal.classList.remove("hidden");
+renderLoop();

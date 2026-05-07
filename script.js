@@ -42,51 +42,60 @@ const QUESTIONS = {
     {
       q: "Quantos arranjos simples de 5 elementos tomados 2 a 2 existem?",
       options: ["10", "20", "25", "15"],
-      correctIndex: 1
+      correctIndex: 1,
+      explanation: "A(5,2) = 5!/(5-2)! = 5·4 = 20."
     },
     {
       q: "A(6,1) é igual a:",
       options: ["1", "6", "5", "720"],
-      correctIndex: 1
+      correctIndex: 1,
+      explanation: "A(n,1) sempre é igual a n. Logo A(6,1)=6."
     },
     {
       q: "Qual fórmula representa arranjo simples?",
       options: ["A(n,p)=n!/p!", "A(n,p)=n!/(n-p)!", "A(n,p)=p!/(n-p)!", "A(n,p)=n^p"],
-      correctIndex: 1
+      correctIndex: 1,
+      explanation: "Por definição, A(n,p) = n! / (n-p)!."
     }
   ],
   medio: [
     {
       q: "Quantos arranjos de 7 elementos tomados 3 a 3?",
       options: ["35", "120", "210", "343"],
-      correctIndex: 2
+      correctIndex: 2,
+      explanation: "A(7,3) = 7·6·5 = 210."
     },
     {
       q: "Em uma corrida com 8 atletas, de quantas formas podium (1o,2o,3o) pode ser formado?",
       options: ["56", "336", "512", "720"],
-      correctIndex: 1
+      correctIndex: 1,
+      explanation: "A(8,3) = 8·7·6 = 336."
     },
     {
       q: "Se A(n,2)=30, qual pode ser o valor de n?",
       options: ["5", "6", "7", "8"],
-      correctIndex: 1
+      correctIndex: 1,
+      explanation: "A(n,2)=n·(n-1). Logo n(n-1)=30 → n=6."
     }
   ],
   dificil: [
     {
       q: "Quantos arranjos de 10 elementos tomados 4 a 4?",
       options: ["210", "2520", "5040", "720"],
-      correctIndex: 1
+      correctIndex: 2,
+      explanation: "A(10,4) = 10·9·8·7 = 5040."
     },
     {
       q: "Se A(n,3)=60, qual valor de n satisfaz a equação?",
       options: ["4", "5", "6", "7"],
-      correctIndex: 1
+      correctIndex: 1,
+      explanation: "A(n,3)=n(n-1)(n-2). Para n=5: 5·4·3=60."
     },
     {
       q: "Em senhas sem repetição com 3 letras distintas escolhidas de 6, quantas existem?",
       options: ["18", "120", "216", "60"],
-      correctIndex: 1
+      correctIndex: 1,
+      explanation: "A(6,3) = 6·5·4 = 120."
     }
   ]
 };
@@ -206,6 +215,15 @@ function getQuestionPool() {
   return { diff, available };
 }
 
+const TIMER_BY_DIFFICULTY = { facil: 15, medio: 12, dificil: 10 };
+let timerIntervalId = null;
+let currentQuestionContext = null;
+
+const timerFillEl = document.getElementById("timerFill");
+const timerTextEl = document.getElementById("timerText");
+const feedbackIconEl = document.querySelector("#feedback .feedback-icon");
+const feedbackTextEl = document.querySelector("#feedback .feedback-text");
+
 function showQuestion() {
   const { diff, available } = getQuestionPool();
   const choice = available[Math.floor(Math.random() * available.length)];
@@ -215,57 +233,124 @@ function showQuestion() {
   questionTitle.textContent = `Pergunta (${labelForDifficulty(diff)})`;
   questionText.textContent = question.q;
   answersContainer.innerHTML = "";
-  feedbackEl.textContent = "";
-  feedbackEl.className = "feedback";
+  feedbackEl.classList.remove("good", "bad", "show");
+  feedbackIconEl.textContent = "";
+  feedbackTextEl.textContent = "";
 
   question.options.forEach((option, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "answer-btn";
-    button.textContent = `${String.fromCharCode(65 + index)}) ${option}`;
-    button.addEventListener("click", () => handleAnswer(index, question.correctIndex));
+    button.innerHTML = `
+      <span class="answer-letter">${String.fromCharCode(65 + index)}</span>
+      <span class="answer-text">${option}</span>
+    `;
+    button.addEventListener("click", () => handleAnswer(index, question.correctIndex, question.explanation));
     answersContainer.appendChild(button);
   });
 
-  questionModal.classList.remove("hidden");
+  currentQuestionContext = { question, diff };
+  openModal(questionModal);
+  startTimer(TIMER_BY_DIFFICULTY[diff] ?? 15, question);
 }
 
-function handleAnswer(selectedIndex, correctIndex) {
+function startTimer(seconds, question) {
+  stopTimer();
+  const total = seconds * 1000;
+  const startedAt = performance.now();
+
+  timerFillEl.style.transition = "none";
+  timerFillEl.style.width = "100%";
+  timerFillEl.classList.remove("warning", "danger");
+  timerTextEl.textContent = `${seconds}s`;
+
+  void timerFillEl.offsetWidth;
+  timerFillEl.style.transition = `width ${total}ms linear`;
+  timerFillEl.style.width = "0%";
+
+  timerIntervalId = setInterval(() => {
+    const elapsed = performance.now() - startedAt;
+    const remaining = Math.max(0, Math.ceil((total - elapsed) / 1000));
+    timerTextEl.textContent = `${remaining}s`;
+
+    if (remaining <= Math.ceil(seconds * 0.5)) timerFillEl.classList.add("warning");
+    if (remaining <= Math.ceil(seconds * 0.25)) timerFillEl.classList.add("danger");
+
+    if (elapsed >= total) {
+      stopTimer();
+      handleAnswer(-1, question.correctIndex, question.explanation, true);
+    }
+  }, 100);
+}
+
+function stopTimer() {
+  if (timerIntervalId !== null) {
+    clearInterval(timerIntervalId);
+    timerIntervalId = null;
+  }
+}
+
+function handleAnswer(selectedIndex, correctIndex, explanation, timedOut = false) {
+  stopTimer();
   const buttons = [...answersContainer.querySelectorAll(".answer-btn")];
   buttons.forEach((btn) => (btn.disabled = true));
   buttons[correctIndex].classList.add("correct");
 
-  if (selectedIndex === correctIndex) {
+  feedbackEl.classList.add("show");
+
+  if (!timedOut && selectedIndex === correctIndex) {
     buttons[selectedIndex].classList.add("correct");
-    feedbackEl.textContent = "Correto! A cobrinha vai crescer.";
+    feedbackIconEl.textContent = "✓";
+    feedbackTextEl.textContent = `Correto! ${explanation || "A cobrinha vai crescer."}`;
     feedbackEl.classList.add("good");
     pendingGrowth = true;
     score += 1;
     speed = Math.max(70, INITIAL_SPEED - score * 4);
   } else {
-    buttons[selectedIndex].classList.add("wrong");
-    feedbackEl.textContent = "Resposta incorreta! Você perdeu 1 vida.";
+    if (!timedOut && selectedIndex >= 0) {
+      buttons[selectedIndex].classList.add("wrong");
+    }
+    feedbackIconEl.textContent = "✗";
+    feedbackTextEl.textContent = timedOut
+      ? `Tempo esgotado! ${explanation || ""}`.trim()
+      : `Incorreto! ${explanation || "Você perdeu 1 vida."}`;
     feedbackEl.classList.add("bad");
     lives -= 1;
     shakeScreen();
     if (lives <= 0) {
       updateHUD();
-      setTimeout(() => endGame("Você ficou sem vidas!"), 900);
+      setTimeout(() => endGame("Você ficou sem vidas!"), 1600);
       return;
     }
   }
 
   updateHUD();
   setTimeout(() => {
-    questionModal.classList.add("hidden");
-    if (!pendingGrowth) {
-      snake.pop();
-    }
-    pendingGrowth = false;
-    food = generateFood();
-    isPausedForQuestion = false;
-    restartLoopWithSpeed();
-  }, 900);
+    closeModal(questionModal, () => {
+      if (!pendingGrowth) {
+        snake.pop();
+      }
+      pendingGrowth = false;
+      food = generateFood();
+      isPausedForQuestion = false;
+      restartLoopWithSpeed();
+    });
+  }, 1600);
+}
+
+function openModal(modal) {
+  modal.classList.remove("hidden", "closing");
+  modal.classList.add("show");
+}
+
+function closeModal(modal, onClosed) {
+  modal.classList.add("closing");
+  modal.classList.remove("show");
+  setTimeout(() => {
+    modal.classList.add("hidden");
+    modal.classList.remove("closing");
+    if (typeof onClosed === "function") onClosed();
+  }, 250);
 }
 
 function updateHUD() {
@@ -309,14 +394,23 @@ function endGame(message) {
   isGameOver = true;
   isPausedForQuestion = true;
   clearInterval(gameLoopId);
+  stopTimer();
   gameOverMessage.textContent = `${message} Pontuação final: ${score}.`;
-  gameOverModal.classList.remove("hidden");
+  if (!questionModal.classList.contains("hidden")) {
+    closeModal(questionModal, () => openModal(gameOverModal));
+  } else {
+    openModal(gameOverModal);
+  }
 }
 
 function closeModals() {
-  questionModal.classList.add("hidden");
-  gameOverModal.classList.add("hidden");
-  if (startModal) startModal.classList.add("hidden");
+  stopTimer();
+  [questionModal, gameOverModal, startModal].forEach((m) => {
+    if (m) {
+      m.classList.add("hidden");
+      m.classList.remove("show", "closing");
+    }
+  });
 }
 
 const particles = [];
@@ -604,5 +698,5 @@ playAgainButton.addEventListener("click", startGame);
 startButton.addEventListener("click", startGame);
 
 initGameState();
-startModal.classList.remove("hidden");
+openModal(startModal);
 renderLoop();

@@ -66,11 +66,20 @@
     </div>
 
     <div id="questionModal" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="modal-content">
-        <h2 id="questionTitle">Pergunta</h2>
-        <p id="questionText"></p>
+      <div class="modal-content question-modal">
+        <div class="timer-bar" aria-hidden="true">
+          <div id="timerFill" class="timer-fill"></div>
+        </div>
+        <div class="question-header">
+          <h2 id="questionTitle">Pergunta</h2>
+          <span id="timerText" class="timer-text">15s</span>
+        </div>
+        <p id="questionText" class="question-text"></p>
         <div id="answers" class="answers"></div>
-        <p id="feedback" class="feedback" aria-live="polite"></p>
+        <div id="feedback" class="feedback" aria-live="polite">
+          <span class="feedback-icon" aria-hidden="true"></span>
+          <span class="feedback-text"></span>
+        </div>
       </div>
     </div>
 
